@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  app_nginx:
+    build: ./infra/common/nginx
+    volumes:
+      - ./infra/common/nginx/conf/nginx.conf:/etc/nginx/nginx.conf:delegated
+      - ./infra/common/nginx/conf/conf.d:/etc/nginx/conf.d:delegated
+    ports:
+      - "8080:80"
+    depends_on:
+      - app_go
+
+  app_go:
+    build: .
+    working_dir: /app
+    environment:
+      DB_NAME: go_test_db
+      DB_USER: gouser
+      DB_PASSWORD: 12345678
+    volumes:
+      - ./codebase:/app:delegated
+    ports:
+      - "8081:9100"
+    depends_on:
+      - app_db
+
+  app_db:
+    image: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: go_test_db
+      POSTGRES_USER: gouser
+      POSTGRES_PASSWORD: 12345678
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./infra/local/postgre/init.sql:/docker-entrypoint-initdb.d/init.sql:delegated
+      - ./infra/local/postgre/data:/var/lib/postgresql/data:delegated
+    ports:
+      - "55432:5432"
